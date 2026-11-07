@@ -24,7 +24,7 @@ export function Navbar({ activeTab, setActiveTab }) {
           </div>
           <div>
             <div className="logo-text">FinPay</div>
-            <div className="logo-subtext">Student Digital Wallet</div>
+            <div className="logo-subtext">Campus Wallet Console</div>
           </div>
         </div>
 

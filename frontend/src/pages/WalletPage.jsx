@@ -144,7 +144,7 @@ export function WalletPage() {
           </form>
 
           <div style={{ marginTop: "1.75rem", padding: "1rem", background: "var(--gray-50)", borderRadius: "8px", fontSize: "0.85rem", color: "var(--gray-600)" }}>
-            <strong>Financial Policy Note:</strong> In accordance with the approved Lab 4 Detailed Design, balances are maintained with exact decimal precision (NUMERIC 12,2) and safeguarded against race conditions through transactional locking.
+            <strong>Wallet safeguards:</strong> Balances use precise decimal values and wallet updates are handled through controlled backend transactions to prevent inconsistent updates.
           </div>
         </div>
       </div>

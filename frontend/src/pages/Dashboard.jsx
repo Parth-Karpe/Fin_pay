@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { 
@@ -210,7 +210,7 @@ export function Dashboard({ setActiveTab, onSelectMerchantForPayment }) {
       <div className="alert alert-info" style={{ marginTop: "1rem" }}>
         <ShieldCheck size={20} style={{ flexShrink: 0 }} />
         <div>
-          <strong>System Financial Integrity Active:</strong> All payment transactions execute atomically with row-level balance verification. No artificial cashback or fabricated balances are shown, strictly preserving the approved design specification.
+          <strong>Transaction safeguards active:</strong> Payments run with balance checks and atomic processing. Cashback and balances are shown only from real recorded data.
         </div>
       </div>
 
@@ -221,7 +221,7 @@ export function Dashboard({ setActiveTab, onSelectMerchantForPayment }) {
             <div className="modal-header">
               <h3 style={{ fontSize: "1.25rem", fontWeight: "700" }}>Top-Up Student Wallet</h3>
               <button onClick={() => setShowDepositModal(false)} style={{ color: "var(--gray-400)", fontSize: "1.25rem" }}>
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -271,3 +271,4 @@ export function Dashboard({ setActiveTab, onSelectMerchantForPayment }) {
     </div>
   );
 }
+

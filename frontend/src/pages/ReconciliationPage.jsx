@@ -61,13 +61,12 @@ export function ReconciliationPage() {
         </button>
       </div>
 
-      {/* Authoritative Architectural Notice */}
       <div className="alert alert-info" style={{ marginBottom: "2rem" }}>
         <Info size={22} style={{ flexShrink: 0 }} />
         <div>
-          <strong>Authoritative Design Policy Notice (Reconciliation):</strong>
+          <strong>Reconciliation records</strong>
           <div style={{ marginTop: "0.25rem", fontSize: "0.85rem", lineHeight: 1.5 }}>
-            As documented in the Lab 4 Detailed Design, external bank/gateway matching rules and dedicated administrative operator roles are explicitly pending approval. This module maintains the complete <code>RECONCILIATION_RUNS</code> record-management foundation (run ID, unique execution month, timestamp, status, audit notes) without assuming unsupported external integrations.
+            This page keeps an internal log of reconciliation runs (month, status, time, notes). It does not connect to external bank or payment-gateway systems or perform unsupported matching.
           </div>
         </div>
       </div>

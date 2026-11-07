@@ -46,10 +46,10 @@ export function AuthPage() {
             <GraduationCap size={30} />
           </div>
           <h1 style={{ fontSize: "1.65rem", fontWeight: "800", color: "var(--dark)", letterSpacing: "-0.5px" }}>
-            FinPay Student Wallet
+            FinPay
           </h1>
-          <p style={{ color: "var(--gray-500)", fontSize: "0.9rem", marginTop: "0.25rem" }}>
-            {isRegister ? "Create your official student wallet" : "Sign in to manage your campus payments"}
+          <p style={{ color: "var(--gray-500)", fontSize: "0.92rem", marginTop: "0.35rem" }}>
+            {isRegister ? "Set up your student wallet account" : "Sign in to manage wallet activity and campus payments"}
           </p>
         </div>
 
