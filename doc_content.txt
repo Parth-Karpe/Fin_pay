@@ -1,0 +1,273 @@
+Laboratory 4 – AI-Assisted Detailed Design
+Data Design • Algorithm Design • Security Design | Simplified Integrated Laboratory Manual
+Aim: Develop and validate implementation-ready detailed designs from approved requirements and the Lab 3 architecture. AI proposes alternatives; students identify silent decisions and approve the final design.
+Student: Parth Karpe    USN: 01FE24BCI062    System: FinPay
+1. Inputs, Method and Submission
+Input
+Output
+Approved requirements, Prompt Records, Lab 3 architecture, ADRs and ARR
+One consolidated Detailed Design Record (DDR) plus final design artifacts
+Common method: Design Need → AI Alternatives → AI Silent Decision → Student Review (ACCEPT / MODIFY / REJECT) → Final Design. Request alternatives only for significant decisions. Do not generate implementation code.
+2. Part A – AI-Assisted Data Design
+A1. Data needs and storage alternatives
+Identify structured transactional data, documents/files and any genuinely specialized search or other workload. RDBMS-only is valid; polyglot persistence requires a justified need.
+Option
+Design
+When suitable
+A
+One PostgreSQL database for users, students, wallets, merchant categories, merchants, payments, cashback and reconciliation runs.
+Selected: FinPay data is structured and transactional; Lab 3 already specifies PostgreSQL.
+B
+PostgreSQL + file/object store.
+Not selected: the supplied FinPay requirements do not identify substantial documents or files.
+C
+PostgreSQL + specialized search/vector/graph store.
+Not selected: no specialized workload is identified in FR1–FR6.
+FinPay decision: Option A – one PostgreSQL database. All identified data is structured transactional data. The supplied requirements do not establish a need for file storage or a specialized search/vector/graph store.
+A2. ER modelling using AI
+Prompt: “Using the approved requirements below, propose entities, attributes, keys, relationships and cardinalities. Resolve M:N relationships and state PK/FK/UNIQUE constraints. Do not invent business rules; list assumptions.”
+ER design item
+AI decision / assumption
+Student action (A/M/R)
+Reason / correction
+Entity / attribute
+USERS(user_id PK, email UNIQUE, password_hash, is_active, created_at); STUDENTS(student_id PK, user_id FK UNIQUE, full_name, created_at); WALLETS(wallet_id PK, student_id FK UNIQUE, balance, updated_at); MERCHANT_CATEGORIES(category_id PK, name UNIQUE); MERCHANTS(merchant_id PK, category_id FK, name); PAYMENTS(payment_id PK, wallet_id FK, merchant_id FK, amount, paid_at); CASHBACK(cashback_id PK, payment_id FK UNIQUE, amount, created_at); RECONCILIATION_RUNS(run_id PK, month UNIQUE, run_at, status, notes).
+ACCEPT
+These entities and fields are present in the FinPay data model supplied in LAB_04.
+Relationship / cardinality
+USERS 1 : 0..1 STUDENTS; STUDENTS 1 : 1 WALLETS; WALLETS 1 : N PAYMENTS; MERCHANT_CATEGORIES 1 : N MERCHANTS; MERCHANTS 1 : N PAYMENTS; PAYMENTS 1 : 0..1 CASHBACK. RECONCILIATION_RUNS has no direct FK relationship in the supplied diagram.
+ACCEPT
+Matches the stated relationships and ER diagram; reconciliation is a monthly check record.
+Key / constraint
+PKs identify each row. STUDENTS.user_id UNIQUE; WALLETS.student_id UNIQUE; CASHBACK.payment_id UNIQUE; USERS.email UNIQUE; MERCHANT_CATEGORIES.name UNIQUE; RECONCILIATION_RUNS.month UNIQUE. All listed FKs link to parent PKs.
+MODIFY
+Keep the explicit uniqueness constraints shown in the source diagram. A non-negative wallet balance and cashback eligibility/amount rules are not confirmed; do not enforce them until approved.
+Artifact: Corrected ER model showing entities, key attributes, relationships and cardinalities.
+Figure 1 – FinPay data model (ER diagram)
+Relationships and cardinalities are listed in the ER modelling table above. RECONCILIATION_RUNS has no direct relationship in the supplied diagram.
+A3. Normalization using AI (up to 3NF)
+Prompt: “Given these relations and known functional dependencies, check 1NF, 2NF and 3NF. Identify anomalies, justify decompositions and give final relations with PKs/FKs. Do not invent dependencies; list assumptions.”
+Normalization item
+AI assumption
+Student action (A/M/R)
+Reason / correction
+Functional dependency / candidate key
+user_id → student record; student_id → wallet record; category_id → category name; merchant_id → merchant category/name; payment_id → wallet, merchant, amount, paid_at; cashback_id → payment_id, amount, created_at; run_id → month, run_at, status, notes.
+ACCEPT
+These dependencies follow the entity keys and attributes in the supplied FinPay model. No additional business dependencies are assumed.
+Decomposition
+Keep USERS, STUDENTS, WALLETS, MERCHANT_CATEGORIES, MERCHANTS, PAYMENTS, CASHBACK and RECONCILIATION_RUNS as separate relations.
+ACCEPT
+Separating login, student, wallet, merchant/category, payment and cashback facts avoids repeating descriptive data and supports the supplied relationships.
+Final PK / FK / constraint
+Use the PK/FK/UNIQUE constraints listed in the ER model. Store password_hash, never a plaintext password. Keep cashback as a separate optional row linked to a payment.
+ACCEPT / MODIFY
+The schema is suitable up to 3NF based on the supplied attributes. Enforce one cashback per payment only as represented by UNIQUE(payment_id); confirm any additional cashback rule before adding it.
+Artifact: Final normalized relational schema (up to 3NF), supported by known functional dependencies. If more than one store is selected, add a brief data map showing data, store and source of truth.
+Final FinPay relational schema (up to 3NF)
+USERS(user_id PK, email UNIQUE, password_hash, is_active, created_at)
+STUDENTS(student_id PK, user_id FK UNIQUE → USERS.user_id, full_name, created_at)
+WALLETS(wallet_id PK, student_id FK UNIQUE → STUDENTS.student_id, balance, updated_at)
+MERCHANT_CATEGORIES(category_id PK, name UNIQUE)
+MERCHANTS(merchant_id PK, category_id FK → MERCHANT_CATEGORIES.category_id, name)
+PAYMENTS(payment_id PK, wallet_id FK → WALLETS.wallet_id, merchant_id FK → MERCHANTS.merchant_id, amount, paid_at)
+CASHBACK(cashback_id PK, payment_id FK UNIQUE → PAYMENTS.payment_id, amount, created_at)
+RECONCILIATION_RUNS(run_id PK, month UNIQUE, run_at, status, notes)
+Normalization note: the supplied model separates facts by their identifying entities. No additional functional dependencies or business constraints are assumed beyond the keys and UNIQUE constraints shown.
+3. Part B – AI-Assisted Algorithm Design
+Select ONE important function. Specify inputs, preconditions, outputs, important constraints and edge cases. Ask AI for two feasible approaches and their trade-offs; review its recommendation.
+Critical function
+Inputs / constraints
+Alternatives and trade-offs
+Student decision
+makePayment(user, merchant_id, amount)
+Inputs: authenticated user, merchant_id, amount. Preconditions: user is logged in; wallet belongs to that user's student. Validate amount > 0; wallet exists; merchant exists. Check sufficient balance only if the non-negative-balance rule is approved. Output: saved payment and updated wallet; save cashback only when eligibility is defined. Edge cases: zero/negative amount, missing wallet/merchant, exact-balance payment, no cashback, failure during save.
+A: One database transaction updates wallet, creates payment and creates eligible cashback; rollback all changes on failure. Keeps related records consistent. B: Save wallet/payment first and cashback later; simpler stages but can leave inconsistent or incomplete results if the later step fails.
+ACCEPT A. Lab 3 ADR-001 requires related payment, wallet and cashback changes to be saved together or not at all. Cashback eligibility and amount remain open questions.
+Artifact: Language-independent pseudocode for the selected algorithm, including approved rules and important edge cases.
+Approved language-independent pseudocode – makePayment
+FUNCTION makePayment(user, merchant_id, amount)
+    BEGIN TRANSACTION
+    IF amount <= 0 THEN ROLLBACK; RETURN error
+    wallet ← wallet belonging to the logged-in user's student
+    IF wallet NOT FOUND THEN ROLLBACK; RETURN 'Wallet not found'
+    merchant ← merchant identified by merchant_id
+    IF merchant NOT FOUND THEN ROLLBACK; RETURN 'Merchant not found'
+    IF approved policy requires non-negative balance AND wallet.balance < amount
+        THEN ROLLBACK; RETURN 'Not enough balance'
+    wallet.balance ← wallet.balance - amount
+    payment ← INSERT payment(wallet, merchant, amount, current_time)
+    IF payment satisfies the approved cashback rule THEN
+        INSERT cashback(payment, approved_cashback_amount, current_time)
+    COMMIT
+    RETURN payment
+ON ANY ERROR: ROLLBACK all changes and return failure
+END FUNCTION
+Important unresolved rules: confirm whether balance may go below zero and define cashback eligibility/amount before activating those checks.
+4. Part C – AI-Assisted Security Design
+AI prompt: “Using the approved requirements and Lab 3 architecture, propose two feasible controls for each of three important security needs. Compare advantages, limitations and assumptions. Recommend a control without inventing requirements.”
+Identify three important security design decisions from the approved specification. Ask AI for two feasible alternatives per decision, compare trade-offs, and approve a justified control. Do not introduce unsupported requirements. Security testing is reserved for a later laboratory.
+Security need
+AI alternatives and trade-offs
+Student decision / rationale
+Authentication / authorization
+A: Session-based authentication. B: JWT token-based authentication; token lifecycle/expiry must be managed.
+Selected: B, JWT, because it is the approved Lab 3 login mechanism. Store only password hashes. Do not invent additional user roles.
+Sensitive-data protection
+A: Check authentication at the router and verify resource ownership in the service. B: Check authentication only at the router; simpler but risks cross-user access if service logic is called incorrectly.
+Selected: A. Verify that the wallet/student belongs to the logged-in user before reading or spending from it. This prevents one student from accessing another student's wallet.
+Integrity / audit / abuse control
+A: Preserve payment, cashback and reconciliation records; corrections are represented by new records. B: Log every operation; more comprehensive but creates extra volume/noise not required by the supplied requirements.
+Selected: A. Keep a reliable record trail for monthly reconciliation (FR5). Do not add all-operation logging or unsupported reconciliation rules.
+5. One Consolidated Detailed Design Record (DDR)
+Design area
+AI silent decision
+Human decision
+A/M/R
+Reason / trade-off
+Data
+Propose separate login, student, wallet, merchant/category, payment, cashback and reconciliation relations; consider optional balance/cashback constraints.
+Use one PostgreSQL database and the eight relations shown in the FinPay ER model. Defer unapproved business constraints.
+ACCEPT / MODIFY
+Matches FR1–FR6 and Lab 3. Structured transactional data does not justify a file or specialized store.
+Algorithm
+Assume a payment must have sufficient funds and may earn cashback under a fixed eligibility rule.
+Use one transaction for wallet update, payment creation and any approved cashback. Keep the sufficient-funds and cashback rules pending confirmation where not explicit.
+ACCEPT / MODIFY
+Atomicity matches Lab 3 ADR-001. No cashback percentage or eligibility rule is invented.
+Security
+Assume JWT, resource ownership checks and permanent transaction records; possible extra roles/logging.
+Use JWT, service-level wallet ownership checks, password hashes and retained payment/cashback/reconciliation records.
+MODIFY
+Uses approved Lab 3 authentication and supports the stated student-data and reconciliation needs without adding roles or excessive logging.
+DDR validation
+Check
+PASS / FAIL
+Evidence / correction
+Consistent with approved requirements
+PASS
+Tables and relationships trace to FinPay FR1–FR6 as represented in LAB_04. Cashback eligibility/amount and reconciliation matching details are explicitly left open.
+Consistent with Lab 3 architecture and ADRs
+PASS
+One PostgreSQL database, JWT login, separate application modules, and atomic payment/wallet/cashback transaction follow the supplied Lab 3 decisions.
+Unsupported AI assumptions removed or clarified
+PASS
+No fixed cashback percentage, cashback eligibility formula, extra roles, reconciliation matching rule or unconditional non-negative-balance rule is added.
+Sufficiently detailed for code generation
+PASS WITH OPEN QUESTIONS
+Entities, keys, relationships, normalization, payment alternatives/pseudocode and security controls are specified. Confirm the open business rules listed below before implementing those rules.
+DDR status: READY FOR APPROVAL (four business-rule questions remain open)
+6. Worked Case Study – TalentHub
+Illustrative assumptions: TalentHub stores students, companies, jobs, eligibility criteria and applications. Any resume storage or additional business rule must be supported by approved requirements.
+A. Data design: alternatives and decision
+Alternative
+Design
+Trade-off
+A
+RDBMS for core records; file reference if needed
+Simple, one transactional store
+B
+RDBMS + object/file storage for resumes
+Separates files; adds storage mechanism
+C
+B + vector store only if semantic resume matching approved
+Supports semantic retrieval; adds complexity
+Example AI silent decision: choose B. Student decision: MODIFY/ACCEPT only if resume storage is an approved requirement; otherwise choose A. No vector store without a documented requirement.
+B. ER model and relational schema
+Entity
+Illustrative attributes
+STUDENT
+StudentID (PK), Name, Branch, CGPA, ActiveBacklogs
+COMPANY
+CompanyID (PK), CompanyName
+JOB
+JobID (PK), CompanyID (FK), Role, MinCGPA, MaxActiveBacklogs
+APPLICATION
+ApplicationID (PK), StudentID (FK), JobID (FK), ApplicationDate, Status
+Relationships: COMPANY 1:N JOB; STUDENT M:N JOB resolved through APPLICATION; STUDENT 1:N APPLICATION and JOB 1:N APPLICATION.
+AI silent decision
+Student action
+Reason
+Create APPLICATION to resolve STUDENT–JOB M:N
+ACCEPT
+Represents each application as its own record
+Copy StudentName and CGPA into APPLICATION
+REJECT
+Attributes depend on StudentID and belong to STUDENT
+Add UNIQUE(StudentID, JobID)
+MODIFY
+Only if one application per student per job is approved
+C. Normalization example (up to 3NF)
+Illustrative unnormalized combined relation: APPLICATION_ALL(ApplicationID, StudentID, StudentName, Branch, CGPA, JobID, Role, CompanyID, CompanyName, ApplicationDate, Status).
+Known FDs: StudentID → StudentName, Branch, CGPA; CompanyID → CompanyName; JobID → CompanyID, Role; ApplicationID → StudentID, JobID, ApplicationDate, Status.
+Final decomposition: STUDENT(StudentID PK, Name, Branch, CGPA, ActiveBacklogs); COMPANY(CompanyID PK, CompanyName); JOB(JobID PK, CompanyID FK, Role, MinCGPA, MaxActiveBacklogs); APPLICATION(ApplicationID PK, StudentID FK, JobID FK, ApplicationDate, Status).
+AI silent decision
+Student action
+Reason
+StudentID determines student academic attributes
+ACCEPT
+Supported by the student data model
+Separate STUDENT, COMPANY and JOB from APPLICATION_ALL
+ACCEPT
+Removes repeated descriptive data and update anomalies
+CompanyName must be unique
+REJECT
+Not an approved constraint; CompanyID is the key
+D. Algorithm design: checkEligibility(student, job)
+Alternative
+Approach
+Trade-off
+A
+Sequential fail-fast checks
+Simple; reports first failure
+B
+Evaluate all applicable checks
+Can report all reasons; more logic
+C
+Generic rule engine
+Flexible but more complex
+Illustrative AI choice: B. Human decision: ACCEPT only if all failure reasons are required; otherwise MODIFY to A. Pseudocode must follow approved CGPA boundary, active-backlog, branch and placement-policy rules.
+E. Security design
+Security need
+AI alternatives, trade-offs and student decision
+Authentication / authorization
+A. Session-based authentication; B. Token-based authentication (token lifecycle complexity)Decision: Choose mechanism consistent with Lab 3; enforce server-side role checks.
+Sensitive data
+A. Role-based field filtering; B. Role-specific API responses (more endpoints)Decision: Expose only approved student fields to authorized roles.
+Integrity / audit
+A. Log sensitive changes; B. Log all operations (higher volume and noise)Decision: Authorize status changes; audit history only if required.
+F. Example consolidated DDR
+Area
+AI recommendation
+Human decision
+Action
+Rationale
+Data
+RDBMS + file store
+Use only if resumes approved
+MODIFY
+Avoid unsupported infrastructure
+Algorithm
+Evaluate all rules
+Select based on required output
+MODIFY
+Respect approved result format
+Security
+Role checks and controlled exposure
+Adopt server-side authorization
+ACCEPT
+Protect placement records
+7. Submission Checklist
+FinPay open questions carried forward from the source document
+• What makes a payment eligible for cashback, and how much is it?
+• What exactly does the monthly reconciliation match payments against?
+• May a wallet balance go below zero?
+• Are there roles beyond students, such as an operator who runs reconciliation?
+DDR status: READY FOR APPROVAL – pending confirmation of the four open questions above.
+☒ One consolidated DDR with three human decisions and four validation checks
+☒ Corrected ER model and normalized relational schema (up to 3NF)
+☒ Storage alternative comparison and polyglot map only when applicable
+☒ Algorithm alternatives and pseudocode for one critical function
+☒ Three security decisions with alternatives, trade-offs and justified selections
+☒ Key AI prompts/outputs and silent-decision evidence (not full chat history)
+Boundary: Do not redesign Lab 3 architecture, invent requirements or generate code in this laboratory.
